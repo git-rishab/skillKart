@@ -1,8 +1,8 @@
 const jwt = require('jsonwebtoken');
 const config = require('../config/default');
 
-const auth = async (req, res, next) => {
-    const token = req.header('x-auth-token');
+const authenticate = async (req, res, next) => {
+    const token = req.header('Authorization').split(' ')[1];
     if (!token) {
         return res.status(401).json({ message: 'Please Login first' });
     }
@@ -16,6 +16,4 @@ const auth = async (req, res, next) => {
     }
 };
 
-module.exports = {
-    auth
-}
+module.exports = authenticate

@@ -1,10 +1,10 @@
-const User = require('../models/User');
+const User = require('../models/User.model');
 const bcrypt = require('bcrypt');
 const config = require('../config/default');
 const jwt = require('jsonwebtoken');
 
 const createUser = async (req, res) => {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
     const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
     if (!emailRegex.test(email)) {
@@ -22,6 +22,7 @@ const createUser = async (req, res) => {
             name,
             email,
             password,
+            role
         });
 
         const salt = await bcrypt.genSalt(2);
@@ -32,7 +33,7 @@ const createUser = async (req, res) => {
         const userResponse = user.toObject();
         delete userResponse.password;
 
-        res.status(201).json(userResponse);
+        res.status(201).json({ ...userResponse, message: 'User registeration successfully' });
     } catch (error) {
         console.error(error.message);
         res.status(500).send({ message: 'Server Error' });
@@ -57,7 +58,7 @@ const loginUser = async (req, res) => {
 
         const payload = {
             user: {
-                id: user.id,
+                _id: user._id,
                 name: user.name,
                 email: user.email
             }
@@ -65,8 +66,8 @@ const loginUser = async (req, res) => {
 
         jwt.sign(
             payload,
-            config.jwtSecret || process.env.JWT_SECRET || 'your-default-secret-key',
-            { expiresIn: config.jwtExpiresIn || '24h' },
+            config.jwtSecret,
+            { expiresIn: config.jwtExpiresIn },
             (err, token) => {
                 if (err) throw err;
                 res.json({ token, message: "Login Successful" });

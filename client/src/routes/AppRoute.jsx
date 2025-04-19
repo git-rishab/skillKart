@@ -6,11 +6,12 @@ import Landing from '../pages/Landing';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
 import Dashboard from '../pages/Dashboard';
+import AdminDashboard from '../pages/Admin-Dashboard';
 
 const AppRoute = () => {
     // In a real app, you would check for authentication here
     // and conditionally redirect users
-    const isAuthenticated = false; // This would be from your auth state
+    const isAuthenticated = true; // This would be from your auth state
 
     return (
         <Router>
@@ -22,7 +23,7 @@ const AppRoute = () => {
                     path="/dashboard"
                     element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />}
                 />
-                {/* Catch all undefined routes */}
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="*" element={<Navigate to="/" />} />
             </Routes>
         </Router>

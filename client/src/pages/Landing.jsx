@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Landing = () => {
     return (
@@ -9,18 +10,18 @@ const Landing = () => {
                     Your intelligent assistant platform
                 </p>
                 <div className="flex justify-center gap-4">
-                    <a
-                        href="/login"
+                    <Link
+                        to="/login"
                         className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
                     >
                         Login
-                    </a>
-                    <a
-                        href="/register"
+                    </Link>
+                    <Link
+                        to="/register"
                         className="px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
                     >
                         Register
-                    </a>
+                    </Link>
                 </div>
             </div>
         </div>

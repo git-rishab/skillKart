@@ -19,7 +19,6 @@ const Register = () => {
             console.log('Passwords do not match');
         } else {
             console.log('Registration attempt with:', formData);
-            // In a real app, you would dispatch a register action here
         }
     };
 

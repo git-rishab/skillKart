@@ -36,6 +36,11 @@ SkillKart is a web application designed to help users learn new skills by provid
     -   View all existing roadmap templates.
     -   Expand roadmaps to see modules and topics.
     -   Edit resources (Title, URL, Type - video, blog, quiz) associated with each topic within a roadmap template.
+#### Admin credentials:
+```
+Email: admin@skillkart.com
+Password: Qwerty
+```
 
 ## Tech Stack
 

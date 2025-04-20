@@ -5,6 +5,8 @@ const User = require('../models/User.model');
 const generatePersonalizedRoadmap = async (req, res) => {
     try {
         const { interest, goals, availableWeeklyTime } = req.body;
+        const userId = req.user._id;
+        const user = await User.findById(userId);
 
         if (!interest || !goals || !availableWeeklyTime) {
             return res.status(400).json({ message: "Interest, goals, and weekly time are required." });
@@ -62,7 +64,31 @@ const generatePersonalizedRoadmap = async (req, res) => {
             }
         }
 
-        // Step 4: Return the filtered or closest match roadmaps with their modules and resources
+        // Step 4: Update the user's activeRoadmaps with the personalized roadmap
+        if (personalizedRoadmaps.length > 0) {
+            const selectedRoadmap = personalizedRoadmaps[0]; // Select the first matching roadmap
+
+            if (!user) {
+                return res.status(404).json({ message: "User not found" });
+            }
+
+            // Check if the user is already following this roadmap
+            const alreadyFollowing = user.activeRoadmaps.some(r =>
+                r.roadmapId.toString() === selectedRoadmap._id.toString()
+            );
+
+            if (!alreadyFollowing) {
+                // Initialize with empty progress array (not empty string)
+                user.activeRoadmaps.push({
+                    roadmapId: selectedRoadmap._id,
+                    startedAt: new Date(),
+                    progress: []
+                });
+
+                await user.save();
+            }
+        }
+
         return res.status(200).json({
             message: "Personalized roadmap generated successfully.",
             roadmaps: personalizedRoadmaps.map((roadmap) => ({
@@ -80,6 +106,7 @@ const generatePersonalizedRoadmap = async (req, res) => {
                     })),
                 })),
             })),
+            activeRoadmaps: user.activeRoadmaps
         });
     } catch (error) {
         console.error("Error generating personalized roadmap: ", error);
@@ -172,13 +199,23 @@ const markTopicComplete = async (req, res) => {
         if (!badgeSet.has("Badge Collector") && badgeSet.size >= 5) badgeSet.add("Badge Collector");
 
         user.badges = Array.from(badgeSet);
-        await user.save();
+
+        // Instead of saving whole user document (which may include invalid activeRoadmaps.progress), update only specific fields
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            {
+                xp: user.xp,
+                badges: user.badges,
+                dailyStreak: user.dailyStreak
+            },
+            { new: true }
+        );
 
         return res.json({
             message: "Topic marked complete",
-            xp: user.xp,
-            badges: user.badges,
-            dailyStreak: user.dailyStreak
+            xp: updatedUser.xp,
+            badges: updatedUser.badges,
+            dailyStreak: updatedUser.dailyStreak
         });
     } catch (err) {
         console.error(err);
@@ -200,10 +237,11 @@ const followRoadmap = async (req, res) => {
         const alreadyFollowing = user.activeRoadmaps.some(r => r.roadmapId.toString() === roadmapId);
         if (alreadyFollowing) return res.status(400).json({ message: "Already following this roadmap" });
 
+        // Initialize with proper empty progress array (not empty string)
         user.activeRoadmaps.push({
             roadmapId,
             startedAt: new Date(),
-            progress: []
+            progress: [] // Ensure this is an empty array, not an empty string
         });
 
         await user.save();
@@ -215,9 +253,84 @@ const followRoadmap = async (req, res) => {
     }
 };
 
+const getRoadmap = async (req, res) => {
+    try {
+        const { roadmapId } = req.params;
+        const roadmap = await RoadmapTemplate.findById(roadmapId);
+        if (!roadmap) return res.status(404).json({ message: "Roadmap not found" });
+        res.json(roadmap);
+    } catch (error) {
+        console.error("Error fetching roadmap:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+// Get user's topic completion status for a specific roadmap
+const getRoadmapProgress = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { roadmapId } = req.params;
+        const progress = await UserRoadmapProgress.findOne({ userId, roadmapId });
+        if (!progress) {
+            return res.status(200).json({ topicCompletions: [] });
+        }
+        return res.status(200).json({ topicCompletions: progress.topicCompletions });
+    } catch (error) {
+        console.error('Error fetching roadmap progress:', error);
+        return res.status(500).json({ message: 'Failed to fetch roadmap progress' });
+    }
+};
+
+// Admin: Get all roadmaps
+const getAllRoadmaps = async (req, res) => {
+    try {
+        const roadmaps = await RoadmapTemplate.find()
+            .populate('createdBy', 'name email');
+        return res.status(200).json(roadmaps);
+    } catch (error) {
+        console.error('Error fetching roadmaps:', error);
+        return res.status(500).json({ message: 'Failed to fetch roadmaps' });
+    }
+};
+
+// Admin: Update topic resources
+const updateTopicResources = async (req, res) => {
+    try {
+        const { roadmapId, moduleIndex, topicIndex } = req.params;
+        const { resources } = req.body;
+
+        // Validate indices
+        if (moduleIndex < 0 || topicIndex < 0) {
+            return res.status(400).json({ message: 'Invalid module or topic index' });
+        }
+
+        const roadmap = await RoadmapTemplate.findById(roadmapId);
+        if (!roadmap) {
+            return res.status(404).json({ message: 'Roadmap not found' });
+        }
+
+        // Validate module and topic exist
+        if (!roadmap.modules[moduleIndex] || !roadmap.modules[moduleIndex].topics[topicIndex]) {
+            return res.status(404).json({ message: 'Module or topic not found' });
+        }
+
+        // Update resources
+        roadmap.modules[moduleIndex].topics[topicIndex].resources = resources;
+        await roadmap.save();
+
+        return res.status(200).json(roadmap);
+    } catch (error) {
+        console.error('Error updating topic resources:', error);
+        return res.status(500).json({ message: 'Failed to update topic resources' });
+    }
+};
 
 module.exports = {
     generatePersonalizedRoadmap,
     markTopicComplete,
-    followRoadmap
+    followRoadmap,
+    getRoadmap,
+    getRoadmapProgress,
+    getAllRoadmaps,
+    updateTopicResources
 };

@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
     AppShell,
-    // Removing Navbar import as it's not directly exported in Mantine v7
-    // Navbar,
     Text,
     Burger,
     useMantineTheme,
@@ -26,7 +24,9 @@ import {
     Switch,
     RingProgress,
     Box,
-    Tabs
+    Tabs,
+    Alert,
+    Loader
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import {
@@ -43,335 +43,22 @@ import {
     IconLogout,
     IconUser,
     IconBell,
-    IconChecklist
+    IconChecklist,
+    IconChevronRight,
+    IconAlertCircle
 } from '@tabler/icons-react';
 import RoadmapView from '../components/RoadmapView';
-
-// Enhanced roadmap data structure for the interactive roadmap view
-const roadmapData = {
-    title: "UI/UX Designer Roadmap",
-    description: "Master user interface design and user experience principles with this comprehensive learning path",
-    difficulty: "Intermediate",
-    weeks: [
-        {
-            weekNumber: 1,
-            title: "Introduction to UI/UX Design",
-            description: "Learn the fundamental concepts, principles, and differences between UI and UX design.",
-            topics: [
-                {
-                    title: "Understanding UI vs UX",
-                    isKey: true,
-                    completed: true,
-                    description: "Learn the key differences between user interface and user experience design",
-                    resources: [
-                        {
-                            title: "UI vs UX Design",
-                            type: "video",
-                            url: "https://example.com/ui-vs-ux"
-                        },
-                        {
-                            title: "The Difference Between UI/UX",
-                            type: "article",
-                            url: "https://example.com/difference-ui-ux"
-                        }
-                    ]
-                },
-                {
-                    title: "Design Thinking Process",
-                    isKey: true,
-                    completed: true,
-                    description: "Understand the five stages of design thinking: empathize, define, ideate, prototype, test",
-                    resources: [
-                        {
-                            title: "Design Thinking Explained",
-                            type: "video",
-                            url: "https://example.com/design-thinking"
-                        },
-                        {
-                            title: "Design Thinking Workshop",
-                            type: "notebook",
-                            url: "https://example.com/design-thinking-workshop"
-                        }
-                    ]
-                },
-                {
-                    title: "User Research Fundamentals",
-                    completed: true,
-                    description: "Learn various methods to understand user needs and behaviors",
-                    resources: [
-                        {
-                            title: "User Research Methods",
-                            type: "article",
-                            url: "https://example.com/user-research"
-                        },
-                        {
-                            title: "User Research Quiz",
-                            type: "quiz",
-                            url: "https://example.com/user-research-quiz"
-                        }
-                    ]
-                },
-                {
-                    title: "Understanding the Design Process",
-                    completed: true,
-                    description: "Overview of the end-to-end design process in modern product teams",
-                    resources: [
-                        {
-                            title: "Modern Design Process",
-                            type: "video",
-                            url: "https://example.com/design-process"
-                        }
-                    ]
-                }
-            ]
-        },
-        {
-            weekNumber: 2,
-            title: "User Research Methods",
-            description: "Dive deeper into various user research techniques to gather valuable insights.",
-            topics: [
-                {
-                    title: "Conducting User Interviews",
-                    isKey: true,
-                    completed: true,
-                    description: "Learn how to plan, conduct, and analyze user interviews",
-                    resources: [
-                        {
-                            title: "User Interview Techniques",
-                            type: "video",
-                            url: "https://example.com/user-interviews"
-                        },
-                        {
-                            title: "Interview Question Template",
-                            type: "article",
-                            url: "https://example.com/interview-template"
-                        }
-                    ]
-                },
-                {
-                    title: "Creating Effective Surveys",
-                    completed: true,
-                    description: "Design surveys that generate actionable insights without biases",
-                    resources: [
-                        {
-                            title: "Survey Design Best Practices",
-                            type: "article",
-                            url: "https://example.com/survey-design"
-                        }
-                    ]
-                },
-                {
-                    title: "Competitive Analysis",
-                    completed: false,
-                    description: "Learn to analyze competitors to identify opportunities and threats",
-                    resources: [
-                        {
-                            title: "Competitive Analysis Framework",
-                            type: "notebook",
-                            url: "https://example.com/competitive-analysis"
-                        },
-                        {
-                            title: "Competitive Analysis Workshop",
-                            type: "video",
-                            url: "https://example.com/comp-analysis-workshop"
-                        }
-                    ]
-                },
-                {
-                    title: "Creating User Personas",
-                    completed: false,
-                    description: "Develop accurate user personas based on research findings",
-                    resources: [
-                        {
-                            title: "User Persona Templates",
-                            type: "article",
-                            url: "https://example.com/personas"
-                        },
-                        {
-                            title: "Personas in UX Design",
-                            type: "video",
-                            url: "https://example.com/personas-video"
-                        }
-                    ]
-                },
-                {
-                    title: "User Journey Mapping",
-                    completed: false,
-                    description: "Map out the complete user journey to identify pain points and opportunities",
-                    resources: [
-                        {
-                            title: "Journey Mapping Workshop",
-                            type: "video",
-                            url: "https://example.com/journey-mapping"
-                        }
-                    ]
-                }
-            ]
-        },
-        {
-            weekNumber: 3,
-            title: "Information Architecture",
-            description: "Learn to organize and structure content effectively to improve user experience.",
-            topics: [
-                {
-                    title: "Information Architecture Basics",
-                    isKey: true,
-                    completed: false,
-                    description: "Understand the core principles of organizing information for usability",
-                    resources: [
-                        {
-                            title: "IA Fundamentals",
-                            type: "video",
-                            url: "https://example.com/ia-basics"
-                        }
-                    ]
-                },
-                {
-                    title: "Creating Site Maps",
-                    completed: false,
-                    description: "Learn to create effective site maps for complex applications",
-                    resources: [
-                        {
-                            title: "Site Mapping Techniques",
-                            type: "article",
-                            url: "https://example.com/site-maps"
-                        }
-                    ]
-                },
-                {
-                    title: "User Flows and Task Flows",
-                    completed: false,
-                    description: "Map out user paths through your application for critical tasks",
-                    resources: [
-                        {
-                            title: "User Flow Diagrams",
-                            type: "video",
-                            url: "https://example.com/user-flows"
-                        },
-                        {
-                            title: "User Flow Workshop",
-                            type: "notebook",
-                            url: "https://example.com/flow-workshop"
-                        }
-                    ]
-                },
-                {
-                    title: "Card Sorting",
-                    completed: false,
-                    description: "Use card sorting techniques to validate information organization",
-                    resources: [
-                        {
-                            title: "Card Sorting Methods",
-                            type: "article",
-                            url: "https://example.com/card-sorting"
-                        },
-                        {
-                            title: "Card Sorting Quiz",
-                            type: "quiz",
-                            url: "https://example.com/card-sorting-quiz"
-                        }
-                    ]
-                }
-            ]
-        },
-        {
-            weekNumber: 4,
-            title: "Wireframing and Prototyping",
-            description: "Learn to create low and high-fidelity prototypes to visualize solutions and test ideas.",
-            topics: [
-                {
-                    title: "Wireframing Fundamentals",
-                    isKey: true,
-                    completed: false,
-                    description: "Master the basics of creating effective wireframes",
-                    resources: [
-                        {
-                            title: "Wireframing Basics",
-                            type: "video",
-                            url: "https://example.com/wireframing-basics"
-                        }
-                    ]
-                },
-                {
-                    title: "Paper Wireframing",
-                    completed: false,
-                    description: "Learn quick sketching techniques for rapid idea exploration",
-                    resources: [
-                        {
-                            title: "Paper Prototyping Workshop",
-                            type: "notebook",
-                            url: "https://example.com/paper-wireframes"
-                        }
-                    ]
-                },
-                {
-                    title: "Digital Wireframing with Figma",
-                    completed: false,
-                    description: "Create wireframes using industry-standard tools",
-                    resources: [
-                        {
-                            title: "Figma for Wireframing",
-                            type: "video",
-                            url: "https://example.com/figma-wireframes"
-                        },
-                        {
-                            title: "Wireframe Templates",
-                            type: "article",
-                            url: "https://example.com/wireframe-templates"
-                        }
-                    ]
-                },
-                {
-                    title: "Creating Interactive Prototypes",
-                    completed: false,
-                    description: "Add interactivity to your wireframes for user testing",
-                    resources: [
-                        {
-                            title: "Interactive Prototyping",
-                            type: "video",
-                            url: "https://example.com/interactive-prototypes"
-                        }
-                    ]
-                },
-                {
-                    title: "Usability Testing with Prototypes",
-                    completed: false,
-                    description: "Plan and conduct usability tests with your prototypes",
-                    resources: [
-                        {
-                            title: "Usability Testing Guide",
-                            type: "article",
-                            url: "https://example.com/usability-testing"
-                        },
-                        {
-                            title: "Usability Testing Quiz",
-                            type: "quiz",
-                            url: "https://example.com/testing-quiz"
-                        }
-                    ]
-                }
-            ]
-        }
-    ],
-    totalXP: {
-        earned: 160,
-        total: 440
-    },
-    badges: [
-        { name: "First Week Complete", icon: <IconAward size={18} />, color: "yellow", earned: true },
-        { name: "Research Master", icon: <IconBook size={18} />, color: "blue", earned: true },
-        { name: "Wireframing Pro", icon: <IconNotebook size={18} />, color: "teal", earned: false },
-        { name: "Prototype Expert", icon: <IconUser size={18} />, color: "violet", earned: false }
-    ]
-};
+import ActiveRoadmapsView from '../components/ActiveRoadmapsView';
+import UserPreferencesModal from '../components/UserPreferencesModal';
+import { API_URL } from '../app/config';
+import { notifications } from '@mantine/notifications';
+import UserStatsGraph from '../components/UserStatsGraph';
 
 // Navigation data
 const mainNavLinks = [
     { icon: <IconDashboard size={20} />, color: "blue", label: "Dashboard", path: "/dashboard" },
     { icon: <IconRoad size={20} />, color: "teal", label: "My Roadmap", path: "/roadmap" },
     { icon: <IconMessages size={20} />, color: "violet", label: "Discussions", path: "/discussions" },
-    { icon: <IconAward size={20} />, color: "yellow", label: "XP & Badges", path: "/badges" },
-    { icon: <IconSettings size={20} />, color: "gray", label: "Settings", path: "/settings" },
 ];
 
 // NavLink component for sidebar
@@ -406,43 +93,179 @@ const Dashboard = () => {
     const [opened, setOpened] = useState(false);
     const [activeLink, setActiveLink] = useState("/dashboard");
     const [activeTab, setActiveTab] = useState("overview");
-    // Using const for userData instead of useState since we don't need to change it yet
-    const userData = {
-        name: "Alex Johnson",
-        email: "alex@example.com",
-        avatar: "https://i.pravatar.cc/150?img=35",
-        level: 3
-    };
-    const [roadmap, setRoadmap] = useState(roadmapData);
+    const [showPreferencesModal, setShowPreferencesModal] = useState(false);
+    const [activeRoadmap, setActiveRoadmap] = useState(null);
+    const [showRoadmapList, setShowRoadmapList] = useState(false);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const [fetchError, setFetchError] = useState(null);
+    const [userData, setUserData] = useState({
+        name: "Loading...",
+        email: "",
+        level: 1,
+        xp: 0,
+        badges: []
+    });
+    const [hasActiveRoadmap, setHasActiveRoadmap] = useState([]);
+    const [isLoadingRoadmaps, setIsLoadingRoadmaps] = useState(true);
     const navigate = useNavigate();
+    const location = useLocation();
     const isSmallScreen = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
+
+    // Fetch user data and roadmaps
+    const fetchUserRoadmaps = async () => {
+        setIsLoadingRoadmaps(true);
+        setFetchError(null);
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                navigate("/login");
+                notifications.show({
+                    title: "Session Expired",
+                    message: "Please log in again to continue.",
+                    color: "red",
+                });
+                return;
+            }
+            const fetchUserDetails = await fetch(`${API_URL}/api/user`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!fetchUserDetails.ok) {
+                throw new Error(`Error fetching user details: ${fetchUserDetails.status}`);
+            }
+
+            const userDetails = await fetchUserDetails.json();
+
+            // Update user data from backend response
+            setUserData({
+                name: userDetails.name || "User",
+                email: userDetails.email || "",
+                level: Math.floor(userDetails.xp / 100) + 1 || 1,
+                xp: userDetails.xp || 0,
+                badges: userDetails.badges || []
+            });
+
+            // Check if the user has any roadmaps followed
+            if (userDetails.activeRoadmaps && userDetails.activeRoadmaps.length > 0) {
+                setHasActiveRoadmap(userDetails.activeRoadmaps);
+
+                // Initial load should show Dashboard, not roadmaps
+                if (isInitialLoad) {
+                    setShowRoadmapList(false); // Don't show roadmap list on initial load
+                    setActiveLink("/dashboard");
+                    setIsInitialLoad(false);
+                }
+            } else {
+                setHasActiveRoadmap([]);
+                // If user has no roadmaps, show the preferences modal
+                if (isInitialLoad) {
+                    setShowPreferencesModal(true);
+                    setIsInitialLoad(false);
+                }
+            }
+        } catch (error) {
+            console.error("Error checking active roadmaps:", error);
+            setFetchError("Failed to load your roadmaps. Please try again later.");
+            setHasActiveRoadmap([]);
+        } finally {
+            setIsLoadingRoadmaps(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchUserRoadmaps();
+    }, []);
+
+    // Check if the location state contains activeTab or noRoadmapFollowed flag
+    useEffect(() => {
+        if (location.state) {
+            if (location.state.activeTab) {
+                setActiveTab(location.state.activeTab);
+            }
+            if (location.state.noRoadmapFollowed) {
+                setShowPreferencesModal(true);
+            }
+        }
+    }, [location]);
 
     const handleNavLinkClick = (path) => {
         setActiveLink(path);
 
         // Set active tab based on navigation
         if (path === "/roadmap") {
-            setActiveTab("roadmap");
+            setActiveTab("overview"); // Always show overview first
+            setShowRoadmapList(true); // Show roadmap list when My Roadmap is clicked
+            // Reset active roadmap to null so the list view is shown
+            setActiveRoadmap(null);
+        } else if (path === "/discussions") {
+            navigate("/discussions");
         } else {
             setActiveTab("overview");
+            setShowRoadmapList(false);
         }
-
-        // In a real app, you would navigate to the path
-        // navigate(path);
-        console.log(`Navigation to ${path}`);
     };
 
     const handleRoadmapProgressUpdate = (progressStats) => {
-        // Update the overall progress stats
-        const newEarned = Math.round((progressStats.percentage / 100) * roadmap.totalXP.total);
+        // Update active roadmap with new progress stats if needed
+        if (activeRoadmap) {
+            setActiveRoadmap(prev => ({
+                ...prev,
+                completionPercentage: progressStats.percentage
+            }));
+        }
+    };
 
-        setRoadmap(prev => ({
-            ...prev,
-            totalXP: {
-                ...prev.totalXP,
-                earned: newEarned
+    // Handle closing the modal
+    const handleClosePreferencesModal = () => {
+        setShowPreferencesModal(false);
+        // After closing the modal, refresh roadmaps in case new ones were added
+        fetchUserRoadmaps();
+
+        // Don't automatically navigate to roadmaps after closing the modal
+        // Let the user stay on the current view
+        setFetchError(null);
+    };
+
+    const handleLogout = () => {
+        try {
+            localStorage.removeItem('token');
+
+            // Verify if the token is removed
+            if (localStorage.getItem('token')) {
+                throw new Error("Failed to remove token from local storage");
             }
-        }));
+
+            // Redirect to login page
+            navigate("/");
+            notifications.show({
+                title: "Logged Out",
+                message: "You have been logged out successfully.",
+                color: "green",
+            });
+        } catch (error) {
+            console.error("Error logging out:", error);
+            notifications.show({
+                title: "Logout Failed",
+                message: "An error occurred while logging out. Please try again.",
+                color: "red",
+            });
+        }
+    }
+
+    // Handle selecting a specific roadmap
+    const handleRoadmapSelect = (roadmap) => {
+        setActiveRoadmap(roadmap);
+        setActiveTab("roadmap"); // Switch to roadmap tab when a specific roadmap is selected
+        setShowRoadmapList(false); // Hide the list view once a roadmap is selected
+    };
+
+    // Handle going back to roadmap list
+    const handleBackToRoadmapList = () => {
+        setActiveRoadmap(null);
+        setShowRoadmapList(true);
+        setActiveTab("overview");
     };
 
     return (
@@ -482,8 +305,7 @@ const Dashboard = () => {
                         <Menu position="bottom-end" shadow="md" width={200}>
                             <Menu.Target>
                                 <UnstyledButton className="flex items-center">
-                                    <Avatar src={userData.avatar} radius="xl" size="sm" />
-                                    <Box visibleFrom="sm" ml="xs">
+                                    <Box visibleFrom="sm">
                                         <Text size="sm" fw={500}>{userData.name}</Text>
                                     </Box>
                                 </UnstyledButton>
@@ -494,7 +316,7 @@ const Dashboard = () => {
                                 <Menu.Item leftSection={<IconUser size={14} />}>Profile</Menu.Item>
                                 <Menu.Item leftSection={<IconSettings size={14} />}>Settings</Menu.Item>
                                 <Menu.Divider />
-                                <Menu.Item leftSection={<IconLogout size={14} />} color="red">
+                                <Menu.Item onClick={handleLogout} leftSection={<IconLogout size={14} />} color="red">
                                     Logout
                                 </Menu.Item>
                             </Menu.Dropdown>
@@ -543,7 +365,7 @@ const Dashboard = () => {
                                 backgroundColor: theme.colors.red[0],
                             },
                         })}
-                        onClick={() => navigate("/")}
+                        onClick={handleLogout}
                     >
                         <Group>
                             <ThemeIcon color="red" variant="light">
@@ -560,13 +382,31 @@ const Dashboard = () => {
                     {/* Navigation Tabs */}
                     <Tabs value={activeTab} onChange={setActiveTab} mb="md">
                         <Tabs.List>
-                            <Tabs.Tab value="overview" icon={<IconDashboard size={14} />}>Dashboard Overview</Tabs.Tab>
-                            <Tabs.Tab value="roadmap" icon={<IconRoad size={14} />}>Interactive Roadmap</Tabs.Tab>
+                            <Tabs.Tab value="overview" icon={<IconDashboard size={14} />}>
+                                {showRoadmapList ? "My Roadmaps" : "Dashboard Overview"}
+                            </Tabs.Tab>
+                            {activeRoadmap && (
+                                <Tabs.Tab value="roadmap" icon={<IconRoad size={14} />}>Interactive Roadmap</Tabs.Tab>
+                            )}
                         </Tabs.List>
                     </Tabs>
 
+                    {/* Display fetch error if any */}
+                    {fetchError && (
+                        <Alert
+                            icon={<IconAlertCircle size={16} />}
+                            title="Error"
+                            color="red"
+                            mb="md"
+                            withCloseButton
+                            onClose={() => setFetchError(null)}
+                        >
+                            {fetchError}
+                        </Alert>
+                    )}
+
                     {/* Dashboard Overview Tab */}
-                    {activeTab === "overview" && (
+                    {activeTab === "overview" && !showRoadmapList && (
                         <>
                             {/* Greeting and stats section */}
                             <Grid mb="md">
@@ -576,157 +416,320 @@ const Dashboard = () => {
                                         <Text c="dimmed" className="mb-4">
                                             You're making great progress on your learning journey.
                                         </Text>
-                                        <Group justify="space-between" className="flex-wrap">
-                                            <div>
-                                                <Text fw={500}>Current Skill Path</Text>
-                                                <Text size="xl" fw={700} className="text-indigo-600">
-                                                    {roadmap.title}
-                                                </Text>
-                                            </div>
-                                            <RingProgress
-                                                size={90}
-                                                roundCaps
-                                                thickness={8}
-                                                sections={[{ value: (roadmap.totalXP.earned / roadmap.totalXP.total) * 100, color: 'blue' }]}
-                                                label={
-                                                    <Text c="blue" fw={700} ta="center" size="lg">
-                                                        {Math.round((roadmap.totalXP.earned / roadmap.totalXP.total) * 100)}%
+                                        {activeRoadmap && (
+                                            <Group justify="space-between" className="flex-wrap">
+                                                <div>
+                                                    <Text fw={500}>Current Skill Path</Text>
+                                                    <Text size="xl" fw={700} className="text-indigo-600">
+                                                        {activeRoadmap.roadmapId.title}
                                                     </Text>
-                                                }
-                                            />
-                                        </Group>
+                                                </div>
+                                                <RingProgress
+                                                    size={90}
+                                                    roundCaps
+                                                    thickness={8}
+                                                    sections={[{ value: activeRoadmap.completionPercentage || 0, color: 'blue' }]}
+                                                    label={
+                                                        <Text c="blue" fw={700} ta="center" size="lg">
+                                                            {Math.round(activeRoadmap.completionPercentage || 0)}%
+                                                        </Text>
+                                                    }
+                                                />
+                                            </Group>
+                                        )}
                                     </Paper>
                                 </Grid.Col>
-
                                 <Grid.Col span={12} md={4}>
                                     <Paper p="md" withBorder radius="md" className="bg-white h-full">
                                         <Group justify="space-between" mb="xs">
                                             <Text fw={500}>Earned Badges</Text>
                                             <Badge variant="outline" color="indigo">
-                                                {roadmap.badges.filter(badge => badge.earned).length}/{roadmap.badges.length}
+                                                {userData.badges ? userData.badges.length : 0} badges
                                             </Badge>
                                         </Group>
 
                                         <Grid>
-                                            {roadmap.badges.map((badge, index) => (
-                                                <Grid.Col key={index} span={6}>
-                                                    <Paper p="sm" className={`flex flex-col items-center text-center ${badge.earned ? '' : 'opacity-40'}`} withBorder={badge.earned} radius="md">
-                                                        <ThemeIcon
-                                                            color={badge.color}
-                                                            size={40}
-                                                            radius="xl"
-                                                            variant={badge.earned ? "filled" : "light"}
-                                                        >
-                                                            {badge.icon}
-                                                        </ThemeIcon>
-                                                        <Text size="xs" mt={5}>{badge.name}</Text>
-                                                    </Paper>
+                                            {userData.badges && userData.badges.length > 0 ? (
+                                                userData.badges.map((badge, index) => (
+                                                    <Grid.Col key={index} span={6}>
+                                                        <Paper p="sm" className="flex flex-col items-center text-center"
+                                                            withBorder radius="md">
+                                                            <ThemeIcon
+                                                                color={getBadgeColor(badge)}
+                                                                size={40}
+                                                                radius="xl"
+                                                                variant="filled"
+                                                            >
+                                                                {getBadgeIcon(badge)}
+                                                            </ThemeIcon>
+                                                            <Text size="xs" mt={5}>{badge}</Text>
+                                                        </Paper>
+                                                    </Grid.Col>
+                                                ))
+                                            ) : (
+                                                <Grid.Col span={12}>
+                                                    <Text align="center" size="sm" color="dimmed">
+                                                        Complete tasks to earn badges!
+                                                    </Text>
                                                 </Grid.Col>
-                                            ))}
+                                            )}
                                         </Grid>
                                     </Paper>
                                 </Grid.Col>
                             </Grid>
 
-                            {/* XP Progress bar */}
-                            <Paper p="md" withBorder radius="md" className="bg-white mb-4">
-                                <Group justify="space-between" mb="sm">
-                                    <div>
-                                        <Text fw={500} size="sm">Overall Progress</Text>
-                                        <Text fw={700} size="lg">{roadmap.totalXP.earned} / {roadmap.totalXP.total} XP</Text>
-                                    </div>
-                                    <Badge size="lg" color="indigo">Level {userData.level}</Badge>
-                                </Group>
-                                <Progress
-                                    size="xl"
-                                    radius="sm"
-                                    value={(roadmap.totalXP.earned / roadmap.totalXP.total) * 100}
-                                    color="indigo"
-                                    striped
-                                    animated
-                                />
-                            </Paper>
+                            {/* Add User Stats Graph */}
+                            <div className="mb-6">
+                                <UserStatsGraph />
+                            </div>
 
-                            {/* Weekly stats cards */}
-                            <Title order={3} mt="lg" mb="md">Your Progress</Title>
-                            <Grid>
-                                {roadmap.weeks.map((week) => {
-                                    const completedCount = week.topics.filter(topic => topic.completed).length;
-                                    const progressPercentage = Math.round((completedCount / week.topics.length) * 100);
+                            {/* Active Roadmaps Section */}
+                            <Title order={3} mt="lg" mb="md">My Roadmaps</Title>
+                            {isLoadingRoadmaps ? (
+                                <Paper p="xl" withBorder radius="md" className="text-center">
+                                    <Loader size="sm" mb="sm" />
+                                    <Text>Loading your roadmaps...</Text>
+                                </Paper>
+                            ) : hasActiveRoadmap && hasActiveRoadmap.length > 0 ? (
+                                <>
+                                    <ActiveRoadmapsView
+                                        roadmaps={hasActiveRoadmap}
+                                        onRoadmapSelect={handleRoadmapSelect}
+                                    />
+                                    <Button
+                                        mt="md"
+                                        variant="outline"
+                                        color="indigo"
+                                        onClick={() => {
+                                            setActiveLink("/roadmap");
+                                            setShowRoadmapList(true);
+                                        }}
+                                        leftSection={<IconRoad size={16} />}
+                                    >
+                                        View All My Roadmaps
+                                    </Button>
+                                </>
+                            ) : (
+                                <Paper p="xl" withBorder radius="md" className="text-center">
+                                    <Text mb="md">You don't have any active roadmaps yet.</Text>
+                                    <Button
+                                        variant="filled"
+                                        color="indigo"
+                                        onClick={() => setShowPreferencesModal(true)}
+                                    >
+                                        Find a Roadmap
+                                    </Button>
+                                </Paper>
+                            )}
 
-                                    return (
-                                        <Grid.Col key={week.weekNumber} span={{ base: 12, sm: 6, md: 3 }}>
-                                            <Card shadow="sm" p="md" radius="md" withBorder>
-                                                <Card.Section withBorder inheritPadding py="xs" className={
-                                                    progressPercentage === 100
-                                                        ? 'bg-green-50'
-                                                        : progressPercentage > 0
-                                                            ? 'bg-blue-50'
-                                                            : 'bg-gray-50'
-                                                }>
-                                                    <Group position="apart">
-                                                        <Text fw={500}>Week {week.weekNumber}</Text>
-                                                        <Badge color={
+                            {/* Weekly stats cards - only show if a roadmap is selected */}
+                            {activeRoadmap && activeRoadmap.roadmapId.modules && (
+                                <>
+                                    <Title order={3} mt="lg" mb="md">Your Progress</Title>
+                                    <Grid>
+                                        {activeRoadmap.roadmapId.modules.map((module) => {
+                                            const completedCount = module.topics.filter(topic => topic.completed).length;
+                                            const progressPercentage = Math.round((completedCount / module.topics.length) * 100);
+
+                                            return (
+                                                <Grid.Col key={module._id || module.weekNumber} span={{ base: 12, sm: 6, md: 3 }}>
+                                                    <Card shadow="sm" p="md" radius="md" withBorder>
+                                                        <Card.Section withBorder inheritPadding py="xs" className={
                                                             progressPercentage === 100
-                                                                ? 'green'
+                                                                ? 'bg-green-50'
                                                                 : progressPercentage > 0
-                                                                    ? 'blue'
-                                                                    : 'gray'
+                                                                    ? 'bg-blue-50'
+                                                                    : 'bg-gray-50'
                                                         }>
-                                                            {progressPercentage}%
-                                                        </Badge>
-                                                    </Group>
-                                                </Card.Section>
+                                                            <Group position="apart">
+                                                                <Text fw={500}>Week {module.weekNumber || module.moduleNumber}</Text>
+                                                                <Badge color={
+                                                                    progressPercentage === 100
+                                                                        ? 'green'
+                                                                        : progressPercentage > 0
+                                                                            ? 'blue'
+                                                                            : 'gray'
+                                                                }>
+                                                                    {progressPercentage}%
+                                                                </Badge>
+                                                            </Group>
+                                                        </Card.Section>
 
-                                                <Text mt="md" mb="xs" fw={500}>
-                                                    {week.title}
-                                                </Text>
+                                                        <Text mt="md" mb="xs" fw={500}>
+                                                            {module.title}
+                                                        </Text>
 
-                                                <Text size="sm" color="dimmed" mb="md">
-                                                    {completedCount} of {week.topics.length} topics completed
-                                                </Text>
+                                                        <Text size="sm" color="dimmed" mb="md">
+                                                            {completedCount} of {module.topics.length} topics completed
+                                                        </Text>
 
-                                                <Progress
-                                                    value={progressPercentage}
-                                                    color={progressPercentage === 100 ? 'green' : 'blue'}
-                                                    size="sm"
-                                                    radius="xl"
-                                                    mb="sm"
-                                                />
+                                                        <Progress
+                                                            value={progressPercentage}
+                                                            color={progressPercentage === 100 ? 'green' : 'blue'}
+                                                            size="sm"
+                                                            radius="xl"
+                                                            mb="sm"
+                                                        />
 
-                                                <Button
-                                                    variant="light"
-                                                    fullWidth
-                                                    mt="md"
-                                                    color={progressPercentage === 100 ? 'green' : 'blue'}
-                                                    onClick={() => {
-                                                        setActiveTab("roadmap");
-                                                    }}
-                                                >
-                                                    {progressPercentage === 100 ? 'Review Week' : 'Continue Learning'}
-                                                </Button>
-                                            </Card>
-                                        </Grid.Col>
-                                    );
-                                })}
-                            </Grid>
+                                                        <Button
+                                                            variant="light"
+                                                            fullWidth
+                                                            mt="md"
+                                                            color={progressPercentage === 100 ? 'green' : 'blue'}
+                                                            onClick={() => {
+                                                                setActiveTab("roadmap");
+                                                            }}
+                                                        >
+                                                            {progressPercentage === 100 ? 'Review Week' : 'Continue Learning'}
+                                                        </Button>
+                                                    </Card>
+                                                </Grid.Col>
+                                            );
+                                        })}
+                                    </Grid>
+                                </>
+                            )}
+                        </>
+                    )}
+
+                    {/* My Roadmaps List View */}
+                    {activeTab === "overview" && showRoadmapList && (
+                        <>
+                            <div className="flex justify-between items-center mb-6">
+                                <Title order={2}>My Roadmaps</Title>
+                                <div>
+                                    <Button
+                                        variant="outline"
+                                        color="indigo"
+                                        onClick={() => setShowPreferencesModal(true)}
+                                        mr="md"
+                                    >
+                                        Browse More Roadmaps
+                                    </Button>
+                                    <Button
+                                        variant="subtle"
+                                        color="gray"
+                                        onClick={() => {
+                                            setShowRoadmapList(false);
+                                            setActiveLink("/dashboard");
+                                        }}
+                                        leftIcon={<IconDashboard size={16} />}
+                                    >
+                                        Back to Dashboard
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {isLoadingRoadmaps ? (
+                                <Paper p="xl" withBorder radius="md" className="text-center">
+                                    <Text>Loading your roadmaps...</Text>
+                                </Paper>
+                            ) : hasActiveRoadmap && hasActiveRoadmap.length > 0 ? (
+                                <ActiveRoadmapsView
+                                    roadmaps={hasActiveRoadmap}
+                                    onRoadmapSelect={handleRoadmapSelect}
+                                />
+                            ) : (
+                                <Paper p="xl" withBorder radius="md" className="text-center">
+                                    <Text mb="md">You don't have any active roadmaps yet.</Text>
+                                    <Text size="sm" color="dimmed" mb="md">
+                                        The roadmaps you selected might not be available yet, or there was an error loading them.
+                                    </Text>
+                                    <Button
+                                        variant="filled"
+                                        color="indigo"
+                                        onClick={() => setShowPreferencesModal(true)}
+                                    >
+                                        Find a Roadmap
+                                    </Button>
+                                </Paper>
+                            )}
                         </>
                     )}
 
                     {/* Interactive Roadmap Tab */}
-                    {activeTab === "roadmap" && (
+                    {activeTab === "roadmap" && activeRoadmap && (
                         <div className="roadmap-container">
-                            <Title order={3} mb="md">Interactive Roadmap</Title>
+                            <Paper p="md" radius="md" withBorder mb={16} className="bg-gradient-to-r from-indigo-50 to-blue-50">
+                                <Group position="apart">
+                                    <div>
+                                        <Text size="lg" fw={700}>{activeRoadmap.roadmapId.title}</Text>
+                                        <Text size="sm" color="dimmed">{activeRoadmap.roadmapId.description || 'Interactive learning roadmap'}</Text>
+                                    </div>
+                                    <Button
+                                        variant="subtle"
+                                        onClick={handleBackToRoadmapList}
+                                    >
+                                        Back to My Roadmaps
+                                    </Button>
+                                </Group>
+                            </Paper>
+
                             <RoadmapView
-                                roadmapData={roadmap}
+                                roadmapData={activeRoadmap}
                                 onProgressUpdate={handleRoadmapProgressUpdate}
                             />
                         </div>
                     )}
                 </div>
             </AppShell.Main>
+            {/* User Preferences Modal */}
+            <UserPreferencesModal
+                isOpen={showPreferencesModal}
+                onClose={handleClosePreferencesModal}
+                token={localStorage.getItem('token')}
+                hasActiveRoadmap={hasActiveRoadmap && hasActiveRoadmap.length > 0}
+            />
         </AppShell>
     );
+};
+
+// Helper function to get badge icon based on badge name
+const getBadgeIcon = (badgeName) => {
+    switch (badgeName) {
+        case "Trailblazer":
+            return <IconRoad size={20} />;
+        case "Week One Warrior":
+            return <IconAward size={20} />;
+        case "Mastermind":
+            return <IconBook size={20} />;
+        case "Knowledge Ninja":
+            return <IconArticle size={20} />;
+        case "Skill Samurai":
+            return <IconAward size={20} />;
+        case "Discussion Dynamo":
+            return <IconMessages size={20} />;
+        case "Curiosity Catalyst":
+            return <IconChecklist size={20} />;
+        case "Badge Collector":
+            return <IconAward size={20} />;
+        default:
+            return <IconAward size={20} />;
+    }
+};
+
+// Helper function to get badge color based on badge name
+const getBadgeColor = (badgeName) => {
+    switch (badgeName) {
+        case "Trailblazer":
+            return "blue";
+        case "Week One Warrior":
+            return "green";
+        case "Mastermind":
+            return "violet";
+        case "Knowledge Ninja":
+            return "red";
+        case "Skill Samurai":
+            return "indigo";
+        case "Discussion Dynamo":
+            return "teal";
+        case "Curiosity Catalyst":
+            return "yellow";
+        case "Badge Collector":
+            return "orange";
+        default:
+            return "gray";
+    }
 };
 
 export default Dashboard;

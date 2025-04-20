@@ -7,6 +7,7 @@ import Login from '../pages/Login';
 import Register from '../pages/Register';
 import Dashboard from '../pages/Dashboard';
 import AdminDashboard from '../pages/Admin-Dashboard';
+import Discussion from '../pages/Discussion';
 
 const AppRoute = () => {
     // In a real app, you would check for authentication here
@@ -24,6 +25,11 @@ const AppRoute = () => {
                     element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />}
                 />
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
+                {/* Discussion routes */}
+                <Route path="/discussions" element={<Discussion />} />
+                <Route path="/discussions/:roadmapId" element={<Discussion />} />
+
                 <Route path="*" element={<Navigate to="/" />} />
             </Routes>
         </Router>

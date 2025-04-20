@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Box,
     Text,
@@ -14,7 +15,12 @@ import {
     Divider,
     Stack,
     Button,
-    Popover
+    Popover,
+    Card,
+    SimpleGrid,
+    Title,
+    Flex,
+    Grid
 } from '@mantine/core';
 import {
     IconChevronDown,
@@ -29,8 +35,12 @@ import {
     IconNotebook,
     IconCheck,
     IconLock,
-    IconExternalLink
+    IconExternalLink,
+    IconCalendar,
+    IconClock,
+    IconTags
 } from '@tabler/icons-react';
+import { API_URL } from '../app/config';
 
 // Resource type icon mapping
 const resourceIcons = {
@@ -58,9 +68,9 @@ const SubTopic = ({ topic, index, weekProgress, onChange, weekNumber, isLocked }
 
     const handleCheck = (e) => {
         if (isLocked) return;
-
-        setChecked(e.currentTarget.checked);
-        onChange(weekNumber, index, e.currentTarget.checked);
+        const isCompleted = e.currentTarget.checked;
+        setChecked(isCompleted);
+        onChange(weekNumber, index, isCompleted, topic._id);
     };
 
     return (
@@ -68,8 +78,7 @@ const SubTopic = ({ topic, index, weekProgress, onChange, weekNumber, isLocked }
             radius="md"
             p="sm"
             mb="xs"
-            className={`border-l-2 transition-all ${checked ? 'border-green-500 bg-green-50' : isLocked ? 'border-gray-300 bg-gray-50 opacity-70' : 'border-blue-300 hover:border-blue-500'
-                }`}
+            className={`border-l-2 transition-all ${checked ? 'border-green-500 bg-green-50' : isLocked ? 'border-gray-300 bg-gray-50 opacity-70' : 'border-blue-300 hover:border-blue-500'}`}
         >
             <Group position="apart" noWrap>
                 <Group noWrap className="flex-grow">
@@ -82,16 +91,16 @@ const SubTopic = ({ topic, index, weekProgress, onChange, weekNumber, isLocked }
                         size="md"
                     />
                     <Box className="flex-grow">
-                        <Text size="sm" fw={500} className={checked ? 'line-through text-gray-500' : ''}>
+                        <div size="sm" fw={500} className={checked ? 'line-through div-gray-500' : ''}>
                             {topic.title}
                             {topic.isKey && (
                                 <Badge size="xs" color="yellow" className="ml-2">Key concept</Badge>
                             )}
-                        </Text>
+                        </div>
                         {topic.description && (
-                            <Text size="xs" color="dimmed" className="ml-1 mt-1">
+                            <div size="xs" color="dimmed" className="ml-1 mt-1">
                                 {topic.description}
-                            </Text>
+                            </div>
                         )}
                     </Box>
                 </Group>
@@ -137,13 +146,62 @@ const SubTopic = ({ topic, index, weekProgress, onChange, weekNumber, isLocked }
 };
 
 // WeekSection component to render a week's worth of content
-const WeekSection = ({ week, updateProgress, isLocked = false }) => {
+const WeekSection = ({ week, updateProgress, isLocked = false, roadmapId }) => {
+    const navigate = useNavigate();
     const [expanded, setExpanded] = useState(false);
     const completedCount = week.topics.filter(topic => topic.completed).length;
     const progressPercentage = (completedCount / week.topics.length) * 100;
 
-    const handleTopicChange = (weekNumber, topicIndex, isCompleted) => {
+    // Mark a single topic complete in backend
+    const markCompleteBackend = async (topicId) => {
+        if (!topicId) {
+            console.error('No topic ID provided for marking complete');
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch(`${API_URL}/api/roadmap/marktopic/complete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ roadmapId, topicId })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Error marking topic complete: ${response.statusText}`);
+            }
+        } catch (err) {
+            console.error('Error marking topic complete:', err);
+        }
+    };
+
+    // Handle individual topic check
+    const handleTopicChange = (weekNumber, topicIndex, isCompleted, topicId) => {
         updateProgress(weekNumber, topicIndex, isCompleted);
+        if (isCompleted) {
+            markCompleteBackend(topicId);
+        }
+    };
+
+    // Mark all topics in week complete
+    const handleMarkAllComplete = async () => {
+        for (let idx = 0; idx < week.topics.length; idx++) {
+            const topic = week.topics[idx];
+            if (!topic.completed && topic._id) {
+                updateProgress(week.weekNumber, idx, true);
+                await markCompleteBackend(topic._id);
+            }
+        }
+    };
+
+    const handleJoinDiscussion = () => {
+        // Navigate to discussions for this roadmap and week
+        navigate(`/discussions/${roadmapId}?week=${week.weekNumber}`);
     };
 
     return (
@@ -268,6 +326,7 @@ const WeekSection = ({ week, updateProgress, isLocked = false }) => {
                                     size="sm"
                                     leftIcon={<IconMessageCircle size={16} />}
                                     color="blue"
+                                    onClick={handleJoinDiscussion}
                                 >
                                     Join Discussion
                                 </Button>
@@ -278,6 +337,7 @@ const WeekSection = ({ week, updateProgress, isLocked = false }) => {
                                     color={progressPercentage === 100 ? "green" : "blue"}
                                     leftIcon={progressPercentage === 100 ? <IconCheck size={16} /> : null}
                                     disabled={isLocked}
+                                    onClick={handleMarkAllComplete}
                                 >
                                     {progressPercentage === 100 ? "Completed" : "Mark All Complete"}
                                 </Button>
@@ -292,19 +352,49 @@ const WeekSection = ({ week, updateProgress, isLocked = false }) => {
 
 // Main RoadmapView component
 const RoadmapView = ({ roadmapData, onProgressUpdate }) => {
-    const [roadmap, setRoadmap] = useState(roadmapData);
+    const [roadmap, setRoadmap] = useState(roadmapData.roadmapId);
+
+    // Fetch user's topic completions and integrate into roadmap state
+    useEffect(() => {
+        const fetchProgress = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+            try {
+                const res = await fetch(`${API_URL}/api/roadmap/progress/${roadmapData.roadmapId._id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('Failed to load progress');
+                const { topicCompletions } = await res.json();
+                // Clone roadmap modules and apply completions
+                setRoadmap(prev => {
+                    const copy = { ...prev };
+                    copy.modules = copy.modules.map(module => {
+                        const topics = module.topics.map(topic => ({
+                            ...topic,
+                            completed: topicCompletions.some(tc => tc.topicId === topic._id)
+                        }));
+                        return { ...module, topics };
+                    });
+                    return copy;
+                });
+            } catch (err) {
+                console.error('Error loading roadmap progress:', err);
+            }
+        };
+        fetchProgress();
+    }, [roadmapData.roadmapId._id]);
 
     const handleProgressUpdate = (weekNumber, topicIndex, isCompleted) => {
         const updatedRoadmap = { ...roadmap };
-        const weekIdx = updatedRoadmap.weeks.findIndex(w => w.weekNumber === weekNumber);
+        const weekIdx = updatedRoadmap.modules.findIndex(w => w.weekNumber === weekNumber);
 
         if (weekIdx !== -1) {
-            updatedRoadmap.weeks[weekIdx].topics[topicIndex].completed = isCompleted;
+            updatedRoadmap.modules[weekIdx].topics[topicIndex].completed = isCompleted;
             setRoadmap(updatedRoadmap);
 
             // Calculate new progress stats
-            const totalTopics = updatedRoadmap.weeks.reduce((sum, week) => sum + week.topics.length, 0);
-            const completedTopics = updatedRoadmap.weeks.reduce((sum, week) => {
+            const totalTopics = updatedRoadmap.modules.reduce((sum, week) => sum + week.topics.length, 0);
+            const completedTopics = updatedRoadmap.modules.reduce((sum, week) => {
                 return sum + week.topics.filter(topic => topic.completed).length;
             }, 0);
 
@@ -325,7 +415,7 @@ const RoadmapView = ({ roadmapData, onProgressUpdate }) => {
         if (week.weekNumber === 1) return false;
 
         // For subsequent weeks, check if previous week has required progress
-        const prevWeek = roadmap.weeks.find(w => w.weekNumber === week.weekNumber - 1);
+        const prevWeek = roadmap.modules.find(w => w.weekNumber === week.weekNumber - 1);
         if (!prevWeek) return false;
 
         // Check if the previous week has at least 80% completion
@@ -350,12 +440,13 @@ const RoadmapView = ({ roadmapData, onProgressUpdate }) => {
             </Paper>
 
             <div className="roadmap-timeline">
-                {roadmap.weeks.map((week) => (
+                {roadmap.modules.map((week) => (
                     <WeekSection
                         key={week.weekNumber}
                         week={week}
                         updateProgress={handleProgressUpdate}
                         isLocked={isWeekLocked(week)}
+                        roadmapId={roadmap._id}
                     />
                 ))}
             </div>

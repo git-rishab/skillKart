@@ -1,233 +1,144 @@
-import { useState } from "react"
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import {
     AppShell,
-    Text,
     Title,
-    UnstyledButton,
-    Group,
-    ThemeIcon,
-    Avatar,
-    Card,
+    Accordion,
     Button,
+    Modal,
+    Stack,
+    Group,
     TextInput,
-    Select,
-    Table,
+    Burger,
+    useMantineTheme,
+    UnstyledButton,
+    ThemeIcon,
+    Text,
+    Box,
     ActionIcon,
     Menu,
-    Badge,
-    Progress,
-    Grid,
-    Paper,
-    RingProgress,
-    Burger,
-    Box,
-    Indicator,
-    Tabs,
-    useMantineTheme
-} from "@mantine/core"
+    Select, // Import Select component
+    Grid,   // Import Grid for layout
+    Paper,   // Import Paper for visual grouping
+    Divider // Import Divider
+} from '@mantine/core';
+import { IconTrash, IconPlus, IconRoad, IconLogout, IconSettings, IconUser, IconBell, IconPencil, IconChevronRight, IconBook } from '@tabler/icons-react'; // Add IconPencil, IconChevronRight, IconBook
+import { showNotification, notifications } from '@mantine/notifications'; // Correct import
 import { useMediaQuery } from '@mantine/hooks';
-import {
-    IconDashboard,
-    IconUpload,
-    IconRoute,
-    IconBook,
-    IconUsers,
-    IconSettings,
-    IconSearch,
-    IconBell,
-    IconEdit,
-    IconTrash,
-    IconLogout,
-    IconUser,
-    IconAward,
-    IconMessageCircle,
-    IconMessages,
-    IconPlus,
-    IconCheck,
-    IconX,
-    IconVideo,
-    IconArticle,
-    IconChecklist,
-    IconAlertTriangle,
-    IconEye
-} from "@tabler/icons-react"
-import { Link, useNavigate } from 'react-router-dom';
+import { API_URL } from '../app/config'; // Assuming config is needed for API calls
 
-// NavbarLink component for sidebar navigation
-function NavbarLink({ icon, label, active, onClick }) {
+// Simplified NavLink for Admin Sidebar
+function AdminNavLink({ icon, color, label, active, onClick }) {
     return (
         <UnstyledButton
-            className={`flex items-center py-3 px-4 rounded-md transition-colors ${active ? "bg-indigo-50 text-indigo-600" : "text-gray-600 hover:bg-gray-100"
-                }`}
+            sx={(theme) => ({
+                display: 'block',
+                width: '100%',
+                padding: theme.spacing.xs,
+                borderRadius: theme.radius.sm,
+                color: theme.colorScheme === 'dark' ? theme.colors.dark[0] : theme.black,
+                backgroundColor: active ? theme.colors[color][0] : 'transparent',
+                '&:hover': {
+                    backgroundColor: theme.colors[color][0],
+                },
+            })}
             onClick={onClick}
         >
             <Group>
-                <ThemeIcon color={active ? "indigo" : "gray"} variant={active ? "light" : "subtle"}>
+                <ThemeIcon color={color} variant="light" size={30}>
                     {icon}
                 </ThemeIcon>
-                <Text size="sm" fw={500}>
-                    {label}
-                </Text>
+                <Text size="sm" weight={500}>{label}</Text>
             </Group>
         </UnstyledButton>
-    )
+    );
 }
 
-// Mock data
-const recentResources = [
-    {
-        id: 1,
-        title: "React Hooks Deep Dive",
-        type: "video",
-        icon: <IconVideo size={16} />,
-        color: "red",
-        category: "Web Development",
-        date: "2025-04-15",
-        status: "published"
-    },
-    {
-        id: 2,
-        title: "Advanced CSS Techniques",
-        type: "article",
-        icon: <IconArticle size={16} />,
-        color: "blue",
-        category: "Web Development",
-        date: "2025-04-12",
-        status: "published"
-    },
-    {
-        id: 3,
-        title: "User Research Methods",
-        type: "quiz",
-        icon: <IconChecklist size={16} />,
-        color: "green",
-        category: "UI/UX Design",
-        date: "2025-04-10",
-        status: "pending"
-    },
-    {
-        id: 4,
-        title: "Data Visualization with D3.js",
-        type: "video",
-        icon: <IconVideo size={16} />,
-        color: "red",
-        category: "Data Science",
-        date: "2025-04-08",
-        status: "published"
-    },
-    {
-        id: 5,
-        title: "Introduction to Python Pandas",
-        type: "article",
-        icon: <IconArticle size={16} />,
-        color: "blue",
-        category: "Data Science",
-        date: "2025-04-05",
-        status: "published"
-    }
-];
-
-const flaggedContent = [
-    {
-        id: 1,
-        title: "Machine Learning Ethics",
-        type: "article",
-        icon: <IconArticle size={16} />,
-        color: "blue",
-        reason: "Outdated information",
-        reportedBy: "Alex Smith",
-        date: "2025-04-14"
-    },
-    {
-        id: 2,
-        title: "JavaScript Promises Tutorial",
-        type: "video",
-        icon: <IconVideo size={16} />,
-        color: "red",
-        reason: "Broken link",
-        reportedBy: "Jamie Wong",
-        date: "2025-04-11"
-    },
-    {
-        id: 3,
-        title: "CSS Grid Layout Quiz",
-        type: "quiz",
-        icon: <IconChecklist size={16} />,
-        color: "green",
-        reason: "Incorrect answer key",
-        reportedBy: "Chris Davis",
-        date: "2025-04-09"
-    }
-];
 
 export default function AdminDashboard() {
     const theme = useMantineTheme();
     const [opened, setOpened] = useState(false);
-    const [activeLink, setActiveLink] = useState("/dashboard");
-    const isSmallScreen = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
+    const [roadmaps, setRoadmaps] = useState([]);
+    const [selected, setSelected] = useState(null);
+    const [adminName, setAdminName] = useState("Admin"); // Placeholder for admin name
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState("dashboard");
+    const isSmallScreen = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
 
-    // Mock admin user data
-    const adminUser = {
-        name: "Maria Rodriguez",
-        role: "Content Curator",
-        avatar: "https://i.pravatar.cc/150?img=45"
-    };
+    // Fetch admin details (optional, could be hardcoded or fetched)
+    // useEffect(() => {
+    //   // Fetch admin user details if needed
+    //   // Example: setAdminName(fetchedAdminDetails.name);
+    // }, []);
 
-    // Stats for dashboard
-    const stats = [
-        { title: "Total Roadmaps", value: "42", icon: <IconRoute size={24} />, color: "indigo" },
-        { title: "Total Resources", value: "387", icon: <IconBook size={24} />, color: "blue" },
-        { title: "Active Learners", value: "8,492", icon: <IconUsers size={24} />, color: "green" },
-        { title: "Unanswered Questions", value: "24", icon: <IconMessageCircle size={24} />, color: "orange" }
-    ];
+    useEffect(() => { fetchRoadmaps(); }, []);
 
-    // Navigation links for sidebar
-    const navLinks = [
-        { icon: <IconDashboard size={20} />, color: "indigo", label: "Dashboard", path: "/dashboard" },
-        { icon: <IconUpload size={20} />, color: "blue", label: "Upload Content", path: "/upload" },
-        { icon: <IconRoute size={20} />, color: "teal", label: "Manage Roadmaps", path: "/roadmaps" },
-        { icon: <IconMessages size={20} />, color: "violet", label: "User Discussions", path: "/discussions" },
-        { icon: <IconAward size={20} />, color: "yellow", label: "Badges & Gamification", path: "/badges" },
-        { icon: <IconSettings size={20} />, color: "gray", label: "Settings", path: "/settings" },
-    ];
-
-    const handleNavLinkClick = (path) => {
-        setActiveLink(path);
-        // Navigate would be used in a real app 
-        // navigate(path);
-        console.log(`Navigating to ${path}`);
-
-        // For demo purposes, map paths to tabs
-        if (path === "/dashboard") setActiveTab("dashboard");
-        else if (path === "/upload" || path === "/roadmaps") setActiveTab("content");
-        else if (path === "/discussions") setActiveTab("discussions");
-        else if (path === "/badges") setActiveTab("badges");
-        else if (path === "/settings") setActiveTab("settings");
-    };
-
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'published': return 'green';
-            case 'pending': return 'yellow';
-            default: return 'gray';
+    const fetchRoadmaps = async () => {
+        try {
+            const token = localStorage.getItem('token'); // Assuming admin needs token
+            if (!token) {
+                navigate("/login"); // Redirect if not logged in
+                return;
+            }
+            const { data } = await axios.get(`${API_URL}/api/roadmap/admin/all`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            setRoadmaps(data);
+        } catch (error) {
+            console.error("Failed to load roadmaps:", error);
+            showNotification({ title: 'Error', message: 'Failed to load roadmaps', color: 'red' });
+            if (error.response && error.response.status === 401) {
+                navigate("/login"); // Redirect on auth error
+            }
         }
     };
 
-    const getStatusBadge = (status) => {
-        return (
-            <Badge color={getStatusColor(status)}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-            </Badge>
-        );
+    const openModal = (roadmapId, moduleIndex, topicIndex, resources) => {
+        setSelected({ roadmapId, moduleIndex, topicIndex, resources: [...resources] });
+    };
+
+    const handleSave = async () => {
+        if (!selected) return;
+        try {
+            const token = localStorage.getItem('token');
+            const { roadmapId, moduleIndex, topicIndex, resources } = selected;
+            await axios.put(`${API_URL}/api/roadmap/${roadmapId}/module/${moduleIndex}/topic/${topicIndex}/resources`,
+                { resources },
+                { headers: { 'Authorization': `Bearer ${token}` } }
+            );
+            showNotification({ title: 'Success', message: 'Resources updated', color: 'green' });
+            setSelected(null);
+            fetchRoadmaps(); // Refresh list after save
+        } catch (error) {
+            console.error("Failed to update resources:", error);
+            showNotification({ title: 'Error', message: 'Update failed', color: 'red' });
+        }
+    };
+
+    const handleLogout = () => {
+        try {
+            localStorage.removeItem('token');
+            navigate("/"); // Redirect to landing or login page
+            notifications.show({
+                title: "Logged Out",
+                message: "You have been logged out successfully.",
+                color: "green",
+            });
+        } catch (error) {
+            console.error("Error logging out:", error);
+            notifications.show({
+                title: "Logout Failed",
+                message: "An error occurred while logging out.",
+                color: "red",
+            });
+        }
     };
 
     return (
         <AppShell
             padding="md"
             navbar={{
-                width: 300,
+                width: 250, // Adjusted width
                 breakpoint: 'sm',
                 collapsed: { mobile: !opened }
             }}
@@ -235,55 +146,39 @@ export default function AdminDashboard() {
         >
             <AppShell.Header className="bg-white border-b border-gray-200">
                 <div style={{ display: 'flex', alignItems: 'center', height: '100%', padding: '0 1rem' }} className="justify-between">
-                    {isSmallScreen && (
-                        <Burger
-                            opened={opened}
-                            onClick={() => setOpened((o) => !o)}
-                            size="sm"
-                            color={theme.colors.gray[6]}
-                            mr="xl"
-                        />
-                    )}
-
-                    <div className="flex items-center">
-                        <div className="w-8 h-8 bg-indigo-600 rounded-md flex items-center justify-center mr-2">
-                            <span className="text-white font-bold text-lg">S</span>
-                        </div>
-                        <Title order={3} className="text-indigo-600 hidden sm:block">SkillKart</Title>
-                        <Badge ml="md" variant="outline" color="indigo">Admin</Badge>
-                    </div>
-
                     <Group>
-                        <TextInput
-                            placeholder="Search..."
-                            icon={<IconSearch size={16} />}
-                            className="hidden md:block"
-                            size="xs"
-                            w={200}
-                        />
+                        {isSmallScreen && (
+                            <Burger
+                                opened={opened}
+                                onClick={() => setOpened((o) => !o)}
+                                size="sm"
+                                color={theme.colors.gray[6]}
+                                mr="xl"
+                            />
+                        )}
+                        {/* Reusing SkillKart Title */}
+                        <div className="flex items-center">
+                            <div className="w-8 h-8 bg-indigo-600 rounded-md flex items-center justify-center mr-2">
+                                <span className="text-white font-bold text-lg">S</span>
+                            </div>
+                            <Title order={3} className="text-indigo-600 hidden sm:block">SkillKart</Title>
+                        </div>
+                        <Text size="lg" fw={500} ml="md">Admin Panel</Text>
+                    </Group>
 
-                        <Indicator disabled={false} color="red" size={10} offset={2} withBorder>
-                            <ActionIcon variant="light" radius="xl" size="lg">
-                                <IconBell size={20} />
-                            </ActionIcon>
-                        </Indicator>
-
+                    {/* Simplified Header Right Section */}
+                    <Group>
+                        <ActionIcon variant="light" radius="xl" size="lg">
+                            <IconBell size={20} />
+                        </ActionIcon>
                         <Menu position="bottom-end" shadow="md" width={200}>
-                            <Menu.Target>
-                                <UnstyledButton className="flex items-center">
-                                    <Avatar src={adminUser.avatar} radius="xl" size="sm" />
-                                    <Box visibleFrom="sm" ml="xs">
-                                        <Text size="sm" fw={500}>{adminUser.name}</Text>
-                                    </Box>
-                                </UnstyledButton>
-                            </Menu.Target>
-
                             <Menu.Dropdown>
                                 <Menu.Label>Account</Menu.Label>
-                                <Menu.Item leftSection={<IconUser size={14} />}>Profile</Menu.Item>
-                                <Menu.Item leftSection={<IconSettings size={14} />}>Settings</Menu.Item>
+                                {/* Add relevant admin actions if needed */}
+                                {/* <Menu.Item leftSection={<IconUser size={14} />}>Profile</Menu.Item> */}
+                                {/* <Menu.Item leftSection={<IconSettings size={14} />}>Settings</Menu.Item> */}
                                 <Menu.Divider />
-                                <Menu.Item leftSection={<IconLogout size={14} />} color="red" onClick={() => navigate("/")}>
+                                <Menu.Item onClick={handleLogout} leftSection={<IconLogout size={14} />} color="red">
                                     Logout
                                 </Menu.Item>
                             </Menu.Dropdown>
@@ -293,286 +188,171 @@ export default function AdminDashboard() {
             </AppShell.Header>
 
             <AppShell.Navbar p="md" className="bg-white">
-                {/* User profile section */}
-                <div className="mb-6">
-                    <Group className="mb-4 pb-4 border-b border-gray-200">
-                        <Avatar src={adminUser.avatar} radius="xl" size="md" />
-                        <div style={{ flex: 1 }}>
-                            <Text size="sm" fw={500}>{adminUser.name}</Text>
-                            <Text c="dimmed" size="xs">{adminUser.role}</Text>
-                        </div>
-                    </Group>
-                </div>
-
-                {/* Navigation links */}
+                {/* Simplified Navbar */}
                 <div className="flex-grow flex flex-col mb-6">
-                    <div className="space-y-2">
-                        {navLinks.map((link, index) => (
-                            <NavbarLink
-                                key={index}
-                                {...link}
-                                active={activeLink === link.path}
-                                onClick={() => handleNavLinkClick(link.path)}
-                            />
-                        ))}
+                    <div className="space-y-2 flex flex-col">
+                        <AdminNavLink
+                            icon={<IconRoad size={20} />}
+                            color="blue"
+                            label="Manage Roadmaps"
+                            active={true} // Always active as it's the main view
+                            onClick={() => { }} // No action needed for now
+                        />
+                        {/* Add other admin links here if needed */}
                     </div>
                 </div>
 
-                {/* Logout button */}
+                {/* Logout Button at the bottom */}
                 <div className="border-t border-gray-200 pt-4 mt-auto">
                     <UnstyledButton
-                        className="flex items-center py-3 px-4 rounded-md transition-colors text-red-600 hover:bg-red-50"
-                        onClick={() => navigate("/")}
+                        sx={(theme) => ({
+                            display: 'block',
+                            width: '100%',
+                            padding: theme.spacing.xs,
+                            borderRadius: theme.radius.sm,
+                            color: theme.colors.red[6],
+                            '&:hover': {
+                                backgroundColor: theme.colors.red[0],
+                            },
+                        })}
+                        onClick={handleLogout}
                     >
                         <Group>
                             <ThemeIcon color="red" variant="light">
                                 <IconLogout size={18} />
                             </ThemeIcon>
-                            <Text size="sm" fw={500}>Logout</Text>
+                            <Text size="sm">Logout</Text>
                         </Group>
                     </UnstyledButton>
                 </div>
             </AppShell.Navbar>
 
             <AppShell.Main className="bg-gray-50">
-                <div className="min-h-screen p-4">
-                    {/* Dashboard content */}
-                    {activeTab === "dashboard" && (
-                        <>
-                            <Paper p="md" withBorder radius="md" className="bg-white mb-6">
-                                <Title order={2} className="mb-1">Welcome, Curator 👋</Title>
-                                <Text c="dimmed" className="mb-4">
-                                    Here's an overview of SkillKart's current stats and recent activities
-                                </Text>
-                            </Paper>
-
-                            {/* Stats cards */}
-                            <Grid mb={24}>
-                                {stats.map((stat, index) => (
-                                    <Grid.Col key={index} span={{ base: 6, md: 3 }}>
-                                        <Card shadow="sm" padding="lg" radius="md" withBorder>
-                                            <Group position="apart">
-                                                <div>
-                                                    <Text c="dimmed" size="sm">{stat.title}</Text>
-                                                    <Text fw={700} size="xl">{stat.value}</Text>
-                                                </div>
-                                                <ThemeIcon size={48} radius="md" color={stat.color} variant="light">
-                                                    {stat.icon}
-                                                </ThemeIcon>
-                                            </Group>
-                                        </Card>
-                                    </Grid.Col>
-                                ))}
-                            </Grid>
-
-                            {/* Content Engagement & Resource Uploads */}
-                            <Grid mb={24}>
-                                <Grid.Col span={{ base: 12, lg: 8 }}>
-                                    <Card shadow="sm" padding="lg" radius="md" withBorder className="h-100">
-                                        <Group position="apart" mb="md">
-                                            <Text fw={600} size="lg">Recently Uploaded Resources</Text>
-                                            <Button variant="subtle" color="indigo" size="xs" rightIcon={<IconEye size={14} />}>
-                                                View All
-                                            </Button>
-                                        </Group>
-
-                                        <Table highlightOnHover>
-                                            <thead>
-                                                <tr>
-                                                    <th>Title</th>
-                                                    <th>Type</th>
-                                                    <th>Category</th>
-                                                    <th>Date Uploaded</th>
-                                                    <th>Status</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {recentResources.map((resource) => (
-                                                    <tr key={resource.id}>
-                                                        <td>{resource.title}</td>
-                                                        <td>
-                                                            <Badge leftSection={resource.icon} color={resource.color} variant="light">
-                                                                {resource.type}
-                                                            </Badge>
-                                                        </td>
-                                                        <td>{resource.category}</td>
-                                                        <td>{resource.date}</td>
-                                                        <td>{getStatusBadge(resource.status)}</td>
-                                                        <td>
-                                                            <Group spacing={4}>
-                                                                <ActionIcon color="blue" variant="subtle">
-                                                                    <IconEdit size={16} />
-                                                                </ActionIcon>
-                                                                <ActionIcon color="red" variant="subtle">
-                                                                    <IconTrash size={16} />
-                                                                </ActionIcon>
+                <div className="p-4 bg-white rounded-md shadow-md">
+                    <Title order={2} mb="xl">Manage Roadmap Resources</Title> {/* Increased bottom margin */}
+                    <Accordion variant="separated" radius="md"> {/* Changed variant and added radius */}
+                        {roadmaps.map((rm) => (
+                            <Accordion.Item key={rm._id} value={rm._id}>
+                                <Accordion.Control>
+                                    <Group>
+                                        <ThemeIcon color="indigo" variant="light" size="lg" radius="md">
+                                            <IconRoad size={20} />
+                                        </ThemeIcon>
+                                        <Text fw={500}>{rm.title}</Text>
+                                    </Group>
+                                </Accordion.Control>
+                                <Accordion.Panel>
+                                    {rm.modules.map((mod, mi) => (
+                                        <Paper key={mi} p="md" mb="md" withBorder radius="sm"> {/* Wrap module in Paper */}
+                                            <Title order={4} mb="sm">Week {mod.weekNumber || mod.moduleNumber}</Title>
+                                            <Stack spacing="xs"> {/* Use Stack for topics */}
+                                                {mod.topics.map((topic, ti) => (
+                                                    <Paper key={topic._id || ti} p="sm" withBorder radius="xs"> {/* Wrap topic in Paper */}
+                                                        <Group justify="space-between">
+                                                            <Group>
+                                                                <ThemeIcon color="gray" variant="light" size="sm">
+                                                                    <IconBook size={14} />
+                                                                </ThemeIcon>
+                                                                <Text size="sm">{topic.title}</Text>
                                                             </Group>
-                                                        </td>
-                                                    </tr>
+                                                            <Button
+                                                                size="xs"
+                                                                variant="light" // Changed variant
+                                                                leftSection={<IconPencil size={14} />} // Added icon
+                                                                onClick={() => openModal(rm._id, mi, ti, topic.resources)}
+                                                            >
+                                                                Edit Resources
+                                                            </Button>
+                                                        </Group>
+                                                    </Paper>
                                                 ))}
-                                            </tbody>
-                                        </Table>
+                                            </Stack>
+                                        </Paper>
+                                    ))}
+                                </Accordion.Panel>
+                            </Accordion.Item>
+                        ))}
+                    </Accordion>
 
-                                        <Button
-                                            leftIcon={<IconPlus size={16} />}
-                                            color="indigo"
-                                            mt="md"
-                                            onClick={() => handleNavLinkClick("/upload")}
-                                        >
-                                            Add New Resource
-                                        </Button>
-                                    </Card>
-                                </Grid.Col>
-
-                                <Grid.Col span={{ base: 12, lg: 4 }}>
-                                    <Card shadow="sm" padding="lg" radius="md" withBorder className="h-100">
-                                        <Text fw={600} size="lg" mb="md">Resource Distribution</Text>
-
-                                        <div className="flex justify-center mb-4">
-                                            <RingProgress
-                                                size={180}
-                                                thickness={16}
-                                                roundCaps
-                                                sections={[
-                                                    { value: 45, color: 'red', tooltip: 'Videos' },
-                                                    { value: 30, color: 'blue', tooltip: 'Articles' },
-                                                    { value: 25, color: 'green', tooltip: 'Quizzes' },
-                                                ]}
-                                                label={
-                                                    <div className="text-center">
-                                                        <Text fw={700} size="lg">387</Text>
-                                                        <Text size="xs" c="dimmed">Total Resources</Text>
-                                                    </div>
-                                                }
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2 mt-4">
-                                            <div className="flex justify-between items-center">
-                                                <Group spacing={8}>
-                                                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                                                    <Text size="sm">Videos</Text>
-                                                </Group>
-                                                <Text size="sm" fw={500}>174 (45%)</Text>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <Group spacing={8}>
-                                                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                                                    <Text size="sm">Articles</Text>
-                                                </Group>
-                                                <Text size="sm" fw={500}>116 (30%)</Text>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <Group spacing={8}>
-                                                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                                                    <Text size="sm">Quizzes</Text>
-                                                </Group>
-                                                <Text size="sm" fw={500}>97 (25%)</Text>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                </Grid.Col>
-                            </Grid>
-
-                            {/* Pending Approvals & Flagged Content */}
-                            <Card shadow="sm" padding="lg" radius="md" withBorder>
-                                <Text fw={600} size="lg" mb="md">Pending Approvals & Flagged Content</Text>
-
-                                {flaggedContent.length > 0 ? (
-                                    <Table highlightOnHover>
-                                        <thead>
-                                            <tr>
-                                                <th>Title</th>
-                                                <th>Type</th>
-                                                <th>Issue</th>
-                                                <th>Reported By</th>
-                                                <th>Date</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {flaggedContent.map((content) => (
-                                                <tr key={content.id}>
-                                                    <td>{content.title}</td>
-                                                    <td>
-                                                        <Badge leftSection={content.icon} color={content.color} variant="light">
-                                                            {content.type}
-                                                        </Badge>
-                                                    </td>
-                                                    <td>
-                                                        <Group spacing={4}>
-                                                            <IconAlertTriangle size={16} className="text-amber-500" />
-                                                            <Text size="sm">{content.reason}</Text>
-                                                        </Group>
-                                                    </td>
-                                                    <td>{content.reportedBy}</td>
-                                                    <td>{content.date}</td>
-                                                    <td>
-                                                        <Group spacing={4}>
-                                                            <ActionIcon color="green" variant="subtle" title="Approve">
-                                                                <IconCheck size={16} />
-                                                            </ActionIcon>
-                                                            <ActionIcon color="red" variant="subtle" title="Reject">
-                                                                <IconX size={16} />
-                                                            </ActionIcon>
-                                                            <ActionIcon color="blue" variant="subtle" title="Edit">
-                                                                <IconEdit size={16} />
-                                                            </ActionIcon>
-                                                        </Group>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </Table>
-                                ) : (
-                                    <Text c="dimmed" align="center" py="xl">
-                                        No flagged content or pending approvals at this time
-                                    </Text>
-                                )}
-                            </Card>
-                        </>
-                    )}
-
-                    {/* Content Management tab (placeholder) */}
-                    {activeTab === "content" && (
-                        <Paper p="md" withBorder radius="md" className="bg-white">
-                            <Title order={2} className="mb-4">Content Management</Title>
-                            <Tabs defaultValue="upload">
-                                <Tabs.List>
-                                    <Tabs.Tab value="upload" icon={<IconUpload size={14} />}>Upload Content</Tabs.Tab>
-                                    <Tabs.Tab value="roadmaps" icon={<IconRoute size={14} />}>Manage Roadmaps</Tabs.Tab>
-                                </Tabs.List>
-                            </Tabs>
-                            <Text mt="lg">Content management tab has been clicked. Full implementation would go here.</Text>
-                        </Paper>
-                    )}
-
-                    {/* Discussions tab (placeholder) */}
-                    {activeTab === "discussions" && (
-                        <Paper p="md" withBorder radius="md" className="bg-white">
-                            <Title order={2} className="mb-4">User Discussions</Title>
-                            <Text>Discussions management tab has been clicked. Full implementation would go here.</Text>
-                        </Paper>
-                    )}
-
-                    {/* Badges tab (placeholder) */}
-                    {activeTab === "badges" && (
-                        <Paper p="md" withBorder radius="md" className="bg-white">
-                            <Title order={2} className="mb-4">Badges & Gamification</Title>
-                            <Text>Badges and gamification tab has been clicked. Full implementation would go here.</Text>
-                        </Paper>
-                    )}
-
-                    {/* Settings tab (placeholder) */}
-                    {activeTab === "settings" && (
-                        <Paper p="md" withBorder radius="md" className="bg-white">
-                            <Title order={2} className="mb-4">Settings</Title>
-                            <Text>Settings tab has been clicked. Full implementation would go here.</Text>
-                        </Paper>
-                    )}
+                    {/* Resource Edit Modal - Enhanced UI */}
+                    <Modal opened={!!selected} onClose={() => setSelected(null)} title="Edit Topic Resources" size="xl"> {/* Increased size slightly */}
+                        {selected && (
+                            <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+                                <Stack spacing="lg"> {/* Increased spacing */}
+                                    {selected.resources.map((res, idx) => (
+                                        <Paper key={idx} p="md" withBorder radius="md" shadow="xs"> {/* Wrap each resource in Paper */}
+                                            <Grid align="flex-end" gutter="md">
+                                                <Grid.Col span={{ base: 12, sm: 4 }}>
+                                                    <TextInput
+                                                        label="Title"
+                                                        required
+                                                        value={res.title}
+                                                        onChange={(e) => {
+                                                            const resources = [...selected.resources];
+                                                            resources[idx].title = e.target.value;
+                                                            setSelected({ ...selected, resources });
+                                                        }}
+                                                    />
+                                                </Grid.Col>
+                                                <Grid.Col span={{ base: 12, sm: 5 }}>
+                                                    <TextInput
+                                                        label="URL"
+                                                        required
+                                                        value={res.url}
+                                                        onChange={(e) => {
+                                                            const resources = [...selected.resources];
+                                                            resources[idx].url = e.target.value;
+                                                            setSelected({ ...selected, resources });
+                                                        }}
+                                                    />
+                                                </Grid.Col>
+                                                <Grid.Col span={{ base: 12, sm: 2 }}>
+                                                    <Select
+                                                        label="Type"
+                                                        required
+                                                        data={['video', 'blog', 'quiz']}
+                                                        value={res.type}
+                                                        onChange={(value) => {
+                                                            const resources = [...selected.resources];
+                                                            resources[idx].type = value;
+                                                            setSelected({ ...selected, resources });
+                                                        }}
+                                                    />
+                                                </Grid.Col>
+                                                <Grid.Col span={{ base: 12, sm: 1 }}>
+                                                    <ActionIcon color="red" variant="light" onClick={() => {
+                                                        const resources = selected.resources.filter((_, i) => i !== idx);
+                                                        setSelected({ ...selected, resources });
+                                                    }} title="Remove Resource">
+                                                        <IconTrash size={18} />
+                                                    </ActionIcon>
+                                                </Grid.Col>
+                                            </Grid>
+                                        </Paper>
+                                    ))}
+                                    <Button
+                                        variant="light"
+                                        leftSection={<IconPlus size={16} />}
+                                        onClick={() => setSelected({
+                                            ...selected,
+                                            // Default new resource includes type
+                                            resources: [...selected.resources, { type: 'video', title: '', url: '' }]
+                                        })}
+                                        fullWidth // Make button wider
+                                        mt="sm"
+                                    >
+                                        Add Another Resource
+                                    </Button>
+                                    <Group justify="right" mt="md"> {/* Added margin top */}
+                                        <Button variant="default" onClick={() => setSelected(null)}>Cancel</Button>
+                                        <Button type="submit">Save Changes</Button>
+                                    </Group>
+                                </Stack>
+                            </form>
+                        )}
+                    </Modal>
                 </div>
             </AppShell.Main>
         </AppShell>
-    )
+    );
 }

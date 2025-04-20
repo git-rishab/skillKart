@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
     TextInput,
     PasswordInput,
@@ -7,18 +7,19 @@ import {
     Paper,
     Title,
     Text,
-    Divider,
     Container,
-    Group,
-    Select,
     Anchor,
     Image,
     Checkbox,
-    Alert
+    Alert,
+    LoadingOverlay
 } from '@mantine/core';
-import { IconBrandGoogle, IconAlertCircle } from '@tabler/icons-react';
+import { IconAlertCircle } from '@tabler/icons-react';
+import { notifications } from '@mantine/notifications';
+import { API_URL } from '../app/config';
 
 const Register = () => {
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -29,8 +30,10 @@ const Register = () => {
     });
 
     const [passwordMismatch, setPasswordMismatch] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-    const { name, email, password, password2, userType, acceptTerms } = formData;
+    const { name, email, password, password2, acceptTerms } = formData;
 
     const onChange = e => {
         if (e.target.name === 'acceptTerms') {
@@ -40,24 +43,61 @@ const Register = () => {
         }
     };
 
-    const handleSelectChange = (value) => {
-        setFormData({ ...formData, userType: value });
-    };
-
-    const onSubmit = e => {
+    const onSubmit = async (e) => {
         e.preventDefault();
         if (password !== password2) {
             setPasswordMismatch(true);
-        } else {
-            setPasswordMismatch(false);
-            console.log('Registration attempt with:', formData);
-            // In a real app, you would dispatch a register action here
+            return;
         }
-    };
 
-    const handleGoogleSignup = () => {
-        console.log('Google signup attempt');
-        // Handle Google registration
+        setPasswordMismatch(false);
+        setLoading(true);
+        setError(null);
+
+        try {
+            // Create request body with the required fields from our backend
+            const userData = {
+                name,
+                email,
+                password,
+            };
+
+            // Make API call to the backend registration endpoint
+            const response = await fetch(`${API_URL}/api/user/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userData)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Registration failed');
+            }
+
+            // Show success notification
+            notifications.show({
+                title: 'Registration Successful',
+                message: 'Your account has been created successfully.',
+                color: 'green'
+            });
+
+            // Redirect to login page after successful registration
+            navigate('/login');
+
+        } catch (err) {
+            console.error('Registration error:', err);
+            setError(err.message || 'An error occurred during registration');
+            notifications.show({
+                title: 'Registration Failed',
+                message: err.message || 'An error occurred during registration',
+                color: 'red'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -119,6 +159,7 @@ const Register = () => {
                         className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center bg-white overflow-y-auto"
                         radius={0}
                     >
+                        <LoadingOverlay visible={loading} overlayBlur={2} />
                         <div className="w-full max-w-md mx-auto">
                             <Title order={2} align="center" className="mb-1 text-gray-900">Create an account</Title>
                             <Text color="dimmed" size="sm" align="center" className="mb-6">
@@ -182,20 +223,6 @@ const Register = () => {
                                     minLength={6}
                                 />
 
-                                <Select
-                                    label="I am a"
-                                    placeholder="Select user type"
-                                    name="userType"
-                                    value={userType}
-                                    onChange={handleSelectChange}
-                                    data={[
-                                        { value: 'learner', label: 'Learner (User)' },
-                                        { value: 'admin', label: 'Content Curator (Admin)' },
-                                    ]}
-                                    size="md"
-                                    required
-                                />
-
                                 <Checkbox
                                     label={
                                         <Text size="sm">
@@ -219,25 +246,9 @@ const Register = () => {
                                     mt="md"
                                     disabled={!acceptTerms}
                                 >
-                                    Create Account
+                                    {loading ? 'Creating account...' : 'Create Account'}
                                 </Button>
                             </form>
-
-                            <Divider
-                                label="or continue with"
-                                labelPosition="center"
-                                my="lg"
-                            />
-
-                            <Button
-                                fullWidth
-                                variant="outline"
-                                leftIcon={<IconBrandGoogle />}
-                                onClick={handleGoogleSignup}
-                                className="border-gray-300"
-                            >
-                                Google Account
-                            </Button>
 
                             <Text align="center" mt="md">
                                 Already have an account?{' '}

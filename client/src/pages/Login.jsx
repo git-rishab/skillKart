@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
     TextInput,
     PasswordInput,
@@ -14,28 +14,96 @@ import {
     Anchor,
     Box,
     Image,
+    Alert,
+    LoadingOverlay
 } from '@mantine/core';
-import { IconBrandGoogle } from '@tabler/icons-react';
+import { IconAlertCircle } from '@tabler/icons-react';
+import { notifications } from '@mantine/notifications';
+import { API_URL } from '../app/config';
 
 const Login = () => {
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
         email: '',
         password: ''
     });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const { email, password } = formData;
 
+    // Check if user is already logged in
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        const userRole = localStorage.getItem('userRole');
+
+        if (token) {
+            // Redirect based on role if already authenticated
+            if (userRole === 'admin') {
+                navigate('/admin/dashboard');
+            } else {
+                navigate('/dashboard');
+            }
+        }
+    }, [navigate]);
+
     const onChange = e => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-    const onSubmit = e => {
+    const onSubmit = async (e) => {
         e.preventDefault();
-        console.log('Login attempt with:', formData);
-        // In a real app, you would dispatch a login action here
-    };
+        setLoading(true);
+        setError(null);
 
-    const handleGoogleLogin = () => {
-        console.log('Google login attempt');
-        // Handle Google authentication
+        try {
+            // Make API call to the backend login endpoint
+            const response = await fetch(`${API_URL}/api/user/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Login failed');
+            }
+
+            localStorage.setItem('token', data.token);
+
+            // Decode the JWT token to get user information
+            const tokenPayload = JSON.parse(atob(data.token.split('.')[1]));
+
+            // Store user role for future checks
+            const userRole = tokenPayload.user.role || 'user';
+            localStorage.setItem('userRole', userRole);
+
+            // Show success notification
+            notifications.show({
+                title: 'Login Successful',
+                message: data.message || 'You have been logged in successfully.',
+                color: 'green'
+            });
+
+            // Redirect based on user role and roadmap status
+            if (userRole === 'admin') {
+                navigate('/admin/dashboard');
+            } else {
+                navigate('/dashboard');
+            }
+
+        } catch (err) {
+            console.error('Login error:', err);
+            setError(err.message || 'Invalid credentials');
+            notifications.show({
+                title: 'Login Failed',
+                message: err.message || 'Invalid email or password',
+                color: 'red'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -85,12 +153,20 @@ const Login = () => {
                     <Paper
                         className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center bg-white"
                         radius={0}
+                        pos="relative"
                     >
+                        <LoadingOverlay visible={loading} overlayBlur={2} />
                         <div className="w-full max-w-md mx-auto">
                             <Title order={2} align="center" className="mb-1 text-gray-900">Sign in to SkillKart</Title>
                             <Text color="dimmed" size="sm" align="center" className="mb-6">
                                 Continue your learning journey
                             </Text>
+
+                            {error && (
+                                <Alert icon={<IconAlertCircle size={16} />} title="Error" color="red" mb="md">
+                                    {error}
+                                </Alert>
+                            )}
 
                             <form onSubmit={onSubmit} className="space-y-4">
                                 <TextInput
@@ -131,11 +207,12 @@ const Login = () => {
                                     color="indigo"
                                     size="md"
                                     className="mt-4"
+                                    loading={loading}
                                 >
                                     Sign In
                                 </Button>
                             </form>
-
+                            {/* 
                             <Divider
                                 label="or continue with"
                                 labelPosition="center"
@@ -150,7 +227,7 @@ const Login = () => {
                                 className="border-gray-300"
                             >
                                 Google Account
-                            </Button>
+                            </Button> */}
 
                             <Text align="center" mt="md">
                                 Don't have an account?{' '}

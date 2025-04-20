@@ -286,9 +286,9 @@ const Landing = () => {
                 <Container size="md" className="text-center">
                     <Title className="text-3xl md:text-4xl font-bold mb-4">Ready to start your learning journey?</Title>
                     <Text size="xl" className="mb-8 opacity-90">Join thousands of learners building their future with SkillKart</Text>
-                    <div className="flex justify-center gap-4 flex-wrap">
+                    <div className="flex justify-center gap-4 flex-wra mt-4">
                         <Link to="/register">
-                            <Button size="lg" color="white" className="text-indigo-600" radius="md">
+                            <Button size="lg" variant="outline" color="white" radius="md">
                                 Get Started
                             </Button>
                         </Link>

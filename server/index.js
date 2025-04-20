@@ -5,6 +5,7 @@ const connectDB = require('./config/database');
 const config = require('./config/default');
 const userRoutes = require('./routes/user.route');
 const roadmapRoutes = require('./routes/roadmap.route');
+const threadRoutes = require('./routes/thread.route');
 
 const app = express();
 
@@ -13,6 +14,7 @@ app.use(express.json());
 
 app.use('/api/user', userRoutes);
 app.use('/api/roadmap', roadmapRoutes);
+app.use('/api/thread', threadRoutes);
 
 app.listen(config.port, () => {
     connectDB();

@@ -8,38 +8,6 @@ const UserSchema = new mongoose.Schema({
 
     xp: { type: Number, default: 0 },
 
-    // interests: [{
-    //     type: String,
-    //     enum: [
-    //         'Web Development',
-    //         'UI/UX Design',
-    //         'Data Science',
-    //         'Mobile App Development',
-    //         'DevOps',
-    //         'Cybersecurity',
-    //         'AI/ML',
-    //         'Cloud Computing'
-    //     ]
-    // }],
-
-    // goals: [{
-    //     type: String,
-    //     enum: [
-    //         'Get a job',
-    //         'Start freelancing',
-    //         'Build a portfolio project',
-    //         'Learn fundamentals',
-    //         'Crack interviews',
-    //         'Switch career'
-    //     ]
-    // }],
-
-    // weeklyAvailableTime: {
-    //     type: Number, // hours per week
-    //     min: 1,
-    //     max: 40
-    // },
-
     dailyStreak: {
         currentStreak: { type: Number, default: 0 },
         lastStreakDate: { type: Date, default: null }
